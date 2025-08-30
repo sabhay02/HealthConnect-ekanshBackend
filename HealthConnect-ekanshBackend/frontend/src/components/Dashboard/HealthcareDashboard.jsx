@@ -2,7 +2,6 @@ import { AlertTriangle, Calendar, CheckCircle, Clock, MessageSquare, Phone, Plus
 import { useEffect, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useAppointmentStore } from "../../store/useAppointmentStore";
-import emailjs from "emailjs-com";
 
 const HealthcareDashboard = () => {
 	const [selectedAppointment, setSelectedAppointment] = useState(null);
@@ -22,12 +21,6 @@ const HealthcareDashboard = () => {
 		clearError,
 	} = useAppointmentStore();
 
-	// Initialize EmailJS
-	useEffect(() => {
-		emailjs.init("D4GFAJzB2x1z2bDs5");
-		console.log("EmailJS initialized");
-	}, []);
-
 	useEffect(() => {
 		const loadData = async () => {
 			try {
@@ -43,7 +36,7 @@ const HealthcareDashboard = () => {
 	const upcomingAppointments = getUpcomingAppointments();
 	const pastAppointments = getPastAppointments();
 
-	// Fixed EmailJS send function
+	// EmailJS send function
 	const sendAppointmentEmail = async (appointment) => {
 		try {
 			console.log("🔍 Sending email for appointment:", appointment);
@@ -54,6 +47,11 @@ const HealthcareDashboard = () => {
 
 			if (!patientEmail) {
 				throw new Error("Patient email not found");
+			}
+
+			// Initialize EmailJS if not already done
+			if (typeof window !== 'undefined' && window.emailjs) {
+				window.emailjs.init("D4GFAJzB2x1z2bDs5");
 			}
 
 			// Generate meeting link
@@ -72,7 +70,7 @@ const HealthcareDashboard = () => {
 			console.log("📧 Sending email with params:", templateParams);
 			setEmailStatus('Sending confirmation email...');
 
-			const result = await emailjs.send(
+			const result = await window.emailjs.send(
 				"service_ypl51ui",
 				"template_uqsslc3",
 				templateParams,
@@ -89,11 +87,11 @@ const HealthcareDashboard = () => {
 			console.error("❌ Failed to send email:", error);
 			setEmailStatus('Failed to send email: ' + (error.message || error.text || 'Unknown error'));
 			setTimeout(() => setEmailStatus(''), 5000);
-			throw error;
+			// Don't throw error to prevent appointment update failure
 		}
 	};
 
-	// Status update with fixed email handling
+	// Status update with email handling
 	const handleStatusUpdate = async (appointmentId, newStatus) => {
 		try {
 			console.log(`🔄 Updating appointment ${appointmentId} to status: ${newStatus}`);
@@ -101,14 +99,17 @@ const HealthcareDashboard = () => {
 			const updated = await updateAppointmentStatus(appointmentId, newStatus);
 			console.log("✅ Appointment updated:", updated);
 
-			// Send email only on acceptance
+			// Send email only on acceptance and if EmailJS is available
 			if (newStatus === "accepted") {
-				try {
-					await sendAppointmentEmail(updated);
-					console.log("✅ Confirmation email sent successfully");
-				} catch (emailError) {
-					console.error("❌ Email failed but appointment was updated:", emailError);
-					alert(`Appointment ${newStatus} successfully, but failed to send confirmation email.`);
+				if (typeof window !== 'undefined' && window.emailjs) {
+					try {
+						await sendAppointmentEmail(updated);
+						console.log("✅ Confirmation email sent successfully");
+					} catch (emailError) {
+						console.error("❌ Email failed but appointment was updated:", emailError);
+					}
+				} else {
+					console.warn("EmailJS not available, skipping email notification");
 				}
 			}
 
@@ -117,7 +118,7 @@ const HealthcareDashboard = () => {
 			
 		} catch (error) {
 			console.error("❌ Failed to update appointment status:", error);
-			alert("Failed to update appointment status. Please try again.");
+			setEmailStatus("Failed to update appointment status. Please try again.");
 		}
 	};
 
