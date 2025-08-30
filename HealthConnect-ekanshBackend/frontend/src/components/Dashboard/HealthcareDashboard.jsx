@@ -41,12 +41,20 @@ const HealthcareDashboard = () => {
 		try {
 			console.log("🔍 Sending email for appointment:", appointment);
 			
-			const patientEmail = appointment.patient?.email;
-			const patientName = appointment.patient?.name || "Patient";
+			// Try multiple ways to get patient email and name
+			const patientEmail = appointment.patient?.email || appointment.patientEmail;
+			const patientName = appointment.patient?.name || appointment.patientName || "Patient";
 			const healthProfName = appointment.healthProfessional?.name || "Healthcare Professional";
 
+			console.log("📧 Patient data:", {
+				patientEmail,
+				patientName,
+				fullPatientObject: appointment.patient
+			});
+
 			if (!patientEmail) {
-				throw new Error("Patient email not found");
+				console.error("❌ Patient email not found in appointment:", appointment);
+				throw new Error(`Patient email not found. Available patient data: ${JSON.stringify(appointment.patient)}`);
 			}
 
 			// Initialize EmailJS if not already done

@@ -37,7 +37,10 @@ export const getAppointments = async (req, res) => {
 	try {
 		let query = req.user.userType === "health_prof" ? { healthProfessional: req.user.id } : { patient: req.user.id };
 
-		const appointments = await Appointment.find(query).populate("patient", "name email").populate("healthProfessional", "name email").sort({ createdAt: -1 });
+		const appointments = await Appointment.find(query)
+			.populate("patient", "name email userType")
+			.populate("healthProfessional", "name email userType")
+			.sort({ createdAt: -1 });
 
 		res.json({ success: true, data: appointments });
 	} catch (error) {
@@ -53,7 +56,9 @@ export const updateAppointmentStatus = async (req, res) => {
 		const appointment = await Appointment.findOne({
 			_id: req.params.id,
 			healthProfessional: req.user.id,
-		});
+		})
+		.populate("patient", "name email userType")
+		.populate("healthProfessional", "name email userType");
 
 		if (!appointment) {
 			return res.status(404).json({ success: false, message: "Appointment not found" });
